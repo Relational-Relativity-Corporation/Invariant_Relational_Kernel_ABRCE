@@ -2,13 +2,145 @@
 //
 // Invariant Relational Operators — Canonical Kernel
 //
-// AXIOM:
-// All information evolves only through invariant relational operators.
-// Coherence is an emergent property of evolution.
+// AXIOM (Domain-Scoped):
+// For all x ∈ D, evolution proceeds via the invariant
+// relational operators defined in this file.
 //
-// This file defines the complete and closed operator basis.
-// These operators are exact mathematical forms, not behavioral contracts.
-// No alternative implementations are permitted at this layer.
+// No claim is made beyond D.
+//
+// =======================================================
+// INVARIANT RELATIONAL KERNEL — ABCRE
+// =======================================================
+//
+// Status: Canonical Relational Constraint Layer
+//
+// This file defines the invariant relational operators
+// A, B, R, C, and their composite E.
+//
+// The kernel operates over a declared, bounded domain D.
+//
+// =======================================================
+// DECLARED DOMAIN
+// =======================================================
+//
+// Let D be defined as:
+//
+//     D := { x ∈ ℝⁿ |
+//            n < ∞  and
+//            |x[i]| < ∞  ∀ i ∈ {0, ..., n−1} }
+//
+// That is:
+//
+// - Finite dimensional relational fields
+// - Finite magnitude at every index
+// - Representable within this system
+//
+// All operator definitions, quantifiers, and alignment
+// conditions apply only to elements of D.
+//
+// Elements not in D are undefined under this kernel.
+//
+// =======================================================
+// STRUCTURAL PROPERTIES OF D
+// =======================================================
+//
+// 1. Finite dimensionality:
+//      n < ∞
+//
+// 2. Finite magnitude:
+//      |x[i]| < ∞  ∀ i ∈ {0, ..., n−1}
+//
+// 3. Local relational reach:
+//      Each operator accesses only finite neighborhoods
+//      (e.g., i±1 in R).
+//
+// 4. Frame index:
+//      Fields are indexed; no global absolute reference exists.
+//
+// =======================================================
+// QUANTIFIER DISCIPLINE
+// =======================================================
+//
+// Two quantifier forms are distinguished:
+//
+// (1) Bounded quantifier:
+//
+//     ∀ x ∈ D'
+//     where D' ⊆ D and D' is explicitly declared.
+//
+// (2) Unbounded quantifier:
+//
+//     ∀ x    (domain undeclared)
+//
+// Only bounded quantifiers are admissible.
+//
+// Any statement containing an undeclared or unbounded
+// quantifier is structurally inadmissible under this kernel.
+//
+// =======================================================
+// ADMISSIBILITY
+// =======================================================
+//
+// A statement S is admissible iff:
+//
+// 1. All referenced elements are members of D.
+// 2. All quantifiers are explicitly bounded over subsets of D.
+// 3. All transformations declared within this kernel
+//    are expressible using A, B, R, C.
+// 4. Evolution preserves membership in D.
+//
+// Statements asserting:
+//
+// - Infinite magnitude
+// - Infinite relational reach
+// - Frame-independent absolute access
+// - Undeclared universal quantification
+//
+// are undefined under this system.
+//
+// Undefined ≠ false.
+// Undefined = not representable in D.
+//
+// =======================================================
+// ALIGNMENT
+// =======================================================
+//
+// Let E(x, ρ) = C(R(B(A(x)), ρ))
+//
+// Alignment holds iff:
+//
+// 1. x ∈ D
+// 2. Evolution proceeds via E exactly once per pass
+// 3. E(x, ρ) ∈ D
+// 4. Operator ordering A → B → R → C is preserved
+// 5. No undeclared quantifiers are introduced
+//
+// Drift occurs when:
+//
+// - Magnitude diverges
+// - Domain is implicitly expanded
+// - Operator ordering is altered
+// - Unbounded quantifiers appear
+//
+// =======================================================
+// SCOPE CLARIFICATION
+// =======================================================
+//
+// This kernel is:
+//
+// - Non-semantic
+// - Non-goal-directed
+// - Non-ontological
+// - Domain-bounded
+// - Non-exhaustive with respect to transformations
+//   not declared within this kernel
+//
+// It defines relational evolution over D only.
+//
+// No claims are made about totality, existence,
+// or states not representable within D.
+//
+// =======================================================
 
 #![allow(dead_code)]
 
@@ -37,7 +169,7 @@
 /// Equilibrium is NOT an invariant—it is a degenerate attractor that
 /// destroys relational structure.
 ///
-/// This form is canonical and non-negotiable.
+/// This form is declared canonical within this kernel.
 pub fn operator_a(field: &[f64]) -> Vec<f64> {
     let n = field.len() as f64;
     let mean = field.iter().sum::<f64>() / n;
@@ -70,7 +202,7 @@ pub fn operator_a(field: &[f64]) -> Vec<f64> {
 /// repeated application drives the field toward uniform distribution.
 /// This is structural dissipation, not thermodynamic loss.
 ///
-/// This form is canonical and non-negotiable.
+/// This form is declared canonical within this kernel.
 pub fn operator_b(field: &[f64]) -> Vec<f64> {
     let n = field.len();
 
@@ -123,7 +255,7 @@ pub fn operator_b(field: &[f64]) -> Vec<f64> {
 /// The parameter ρ (rho) controls circulation strength.
 /// ρ must be bounded: typical range [0.0, 0.5] for stability.
 ///
-/// This form is canonical and non-negotiable.
+/// This form is declared canonical within this kernel.
 pub fn operator_r(field: &[f64], rho: f64) -> Vec<f64> {
     let n = field.len();
 
@@ -158,7 +290,7 @@ pub fn operator_r(field: &[f64], rho: f64) -> Vec<f64> {
 /// This prevents runaway growth without introducing thresholds,
 /// clipping, or corrective logic.
 ///
-/// This form is canonical and non-negotiable.
+/// This form is declared canonical within this kernel.
 pub fn operator_c(field: &[f64]) -> Vec<f64> {
     field.iter()
         .map(|&x| x / (1.0 + x.abs()))
@@ -193,7 +325,7 @@ pub fn operator_c(field: &[f64]) -> Vec<f64> {
 /// E explicitly includes R (circulation) as a structural requirement
 /// for persistent, non-equilibrium dynamics.
 ///
-/// This defines lawful evolution under invariant relational mathematics.
+/// This defines evolution under this kernel for all x ∈ D.
 pub fn operator_e(field: &[f64], rho: f64) -> Vec<f64> {
     let a = operator_a(field);
     let b = operator_b(&a);
@@ -201,6 +333,24 @@ pub fn operator_e(field: &[f64], rho: f64) -> Vec<f64> {
     operator_c(&r)
 }
 
+// =======================================================
+// OPERATOR TYPE SIGNATURES
+// =======================================================
+//
+// Declared operator types over D:
+//
+//   A : D    → ℝⁿ       (gradient extraction; output not yet bounded)
+//   B : ℝⁿ  → ℝⁿ       (local accumulation; preserves dimensionality)
+//   R : ℝⁿ × ℝ → ℝⁿ   (antisymmetric circulation; ρ ∈ ℝ bounded)
+//   C : ℝⁿ  → D        (bounded coherence; output ∈ D by construction)
+//
+// Composite:
+//
+//   E : D × ℝ → D      (full evolution; D-closed by C)
+//
+// These signatures are declared within this kernel only.
+// No claim is made about operator behavior outside D.
+//
 // =======================================================
 // STRUCTURAL ENFORCEMENT
 // =======================================================
@@ -214,5 +364,5 @@ pub fn operator_e(field: &[f64], rho: f64) -> Vec<f64> {
 // - double application (no internal iteration)
 // - state leakage (no mutable references, no side effects)
 //
-// Evolution occurs through E only.
-// No alternative composition is valid at this layer.
+// Within this kernel, evolution is defined only via E.
+// Alternative compositions are not defined here.
