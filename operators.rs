@@ -9,7 +9,7 @@
 // No claim is made beyond D.
 //
 // =======================================================
-// INVARIANT RELATIONAL KERNEL — ABCRE
+// INVARIANT RELATIONAL KERNEL — ABRCE
 // =======================================================
 //
 // Status: Canonical Relational Constraint Layer
@@ -157,17 +157,17 @@
 /// - Preserves dimensionality
 /// - Introduces distinction without hierarchy
 ///
-/// WHY SYMMETRIC:
-/// A extracts relational differences from absolute values.
-/// It is symmetric because A(x) = −A(−x) would hold if we negated around
-/// a different reference, but more fundamentally: A treats all positions
-/// equivalently with respect to the global mean.
+/// RELATIONAL PROPERTIES:
+/// A(x)[i] = x[i] − mean(x)
+/// ∀ i: A(x)[i] expresses the signed difference of x[i]
+/// from the mean of x within D.
+/// Σ A(x)[i] = 0 — the zero-sum property holds by construction.
+/// A treats all indices equivalently with respect to mean(x).
 ///
-/// WHY THIS LEADS TO CONVERGENCE (when used alone):
-/// Repeated application of symmetric operators dissipates gradients.
-/// Without antisymmetric circulation, information flows toward equilibrium.
-/// Equilibrium is NOT an invariant—it is a degenerate attractor that
-/// destroys relational structure.
+/// UNDER REPEATED APPLICATION ALONE:
+/// ∀ i: A(x)[i] → 0 as applications increase.
+/// Repeated application produces an index-uniform vector x* ∈ D.
+/// E(x*, ρ) = x*   within D.
 ///
 /// This form is declared canonical within this kernel.
 pub fn operator_a(field: &[f64]) -> Vec<f64> {
@@ -192,15 +192,16 @@ pub fn operator_a(field: &[f64]) -> Vec<f64> {
 /// - No global aggregation
 /// - Topology-defined (ring structure)
 ///
-/// WHY SYMMETRIC:
-/// B couples each element only to its immediate neighbor.
-/// The operation is symmetric because information flows equally
-/// in the defined topological structure—there is no preferred direction.
+/// RELATIONAL PROPERTIES:
+/// B(x)[i] = x[i] + x[(i+1) mod n]
+/// Each index couples only to its immediate successor
+/// within the declared ring topology.
+/// No index accesses elements beyond neighborhood i±1.
 ///
-/// WHY THIS LEADS TO CONVERGENCE (when used alone):
-/// Symmetric accumulation smooths gradients. Without directional bias,
-/// repeated application drives the field toward uniform distribution.
-/// This is structural dissipation, not thermodynamic loss.
+/// UNDER REPEATED APPLICATION ALONE:
+/// ∀ i,j: |B^n(x)[i] − B^n(x)[j]| → 0 as n increases.
+/// Repeated application produces an index-uniform vector x* ∈ D.
+/// E(x*, ρ) = x*   within D.
 ///
 /// This form is declared canonical within this kernel.
 pub fn operator_b(field: &[f64]) -> Vec<f64> {
@@ -225,35 +226,24 @@ pub fn operator_b(field: &[f64]) -> Vec<f64> {
 /// - Preserves total magnitude under periodic boundary
 /// - Zero-sum in the circulation term
 ///
-/// WHY ANTISYMMETRIC:
-/// R computes a *difference* between forward and backward neighbors,
-/// creating a directional gradient. This breaks the symmetry that
-/// causes convergence.
+/// RELATIONAL PROPERTIES:
+/// R(x)[i] = x[i] + ρ · (x[(i+1) mod n] − x[(i−1) mod n])
+/// The circulation term ρ·(x[i+1] − x[i−1]) is a
+/// forward-backward index difference — antisymmetric
+/// under index reflection.
+/// R(x)[i] ≠ R(x)[n−i] in general.
+/// This breaks the index symmetry present in A and B.
 ///
-/// R(x) ≠ R(−x) in general structure.
-/// R introduces rotational or circulatory dynamics.
+/// NECESSITY WITHIN D:
+/// Under A and B alone:
+///   ∀ i,j: |x[i] − x[j]| → 0 within D.
+///   Repeated application produces an index-uniform vector x* ∈ D.
+///   E(x*, ρ) = x*   within D.
+/// R introduces ρ·(x[i+1] − x[i−1]) at each index,
+/// maintaining nonzero index-to-index differences
+/// provided ρ > 0 and x is not index-uniform.
 ///
-/// WHY R IS NECESSARY FOR PERSISTENCE:
-/// Without antisymmetric circulation, symmetric operators (A, B)
-/// drive all fields toward equilibrium—a state of zero relational
-/// distinction.
-///
-/// R enables persistent, non-equilibrium dynamics by sustaining
-/// gradients through circulation rather than dissipation.
-///
-/// Persistent structures are not stable objects.
-/// They are dynamically sustained circulation patterns.
-///
-/// WHY EQUILIBRIUM IS NOT AN INVARIANT:
-/// Equilibrium is a *degenerate attractor* where relational structure
-/// collapses. It is not preserved under evolution—it is the absence
-/// of evolution.
-///
-/// True invariants persist *through* transformation.
-/// Equilibrium is the cessation of transformation.
-///
-/// The parameter ρ (rho) controls circulation strength.
-/// ρ must be bounded: typical range [0.0, 0.5] for stability.
+/// ρ must satisfy: ρ ∈ (0.0, 0.5] for output to remain in D.
 ///
 /// This form is declared canonical within this kernel.
 pub fn operator_r(field: &[f64], rho: f64) -> Vec<f64> {
@@ -263,7 +253,7 @@ pub fn operator_r(field: &[f64], rho: f64) -> Vec<f64> {
         .enumerate()
         .map(|(i, &x)| {
             let i_next = (i + 1) % n;
-            let i_prev = (i + n - 1) % n;  // handles i=0 case correctly
+            let i_prev = (i + n - 1) % n;
             x + rho * (field[i_next] - field[i_prev])
         })
         .collect()
@@ -282,13 +272,15 @@ pub fn operator_r(field: &[f64], rho: f64) -> Vec<f64> {
 /// - Saturating nonlinearity
 /// - No clamping, no repair
 ///
-/// WHY THIS FORM:
-/// Boundedness arises from mathematical structure, not enforcement.
-/// The operator naturally compresses unbounded inputs into a finite range
-/// while preserving sign and relative ordering.
-///
-/// This prevents runaway growth without introducing thresholds,
-/// clipping, or corrective logic.
+/// RELATIONAL PROPERTIES:
+/// C(x)[i] = x[i] / (1 + |x[i]|)
+/// ∀ x[i] ∈ ℝ: C(x)[i] ∈ (−1, 1).
+/// Output membership in D is guaranteed by construction.
+/// Sign and relative index ordering are preserved.
+/// C(−x) = −C(x) — odd function over D.
+/// No clamping, thresholding, or corrective logic is introduced.
+/// Boundedness is a structural property of the operator,
+/// not an enforcement condition applied to its output.
 ///
 /// This form is declared canonical within this kernel.
 pub fn operator_c(field: &[f64]) -> Vec<f64> {
