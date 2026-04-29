@@ -20,7 +20,7 @@ No claim is made beyond **D**.
 
 ### 1.1 Invariant Relational Evolution
 
-Information evolves through invariant relational operators defined over **D**.
+Information is transformed under invariant relational operators defined over **D**.
 
 Coherence holds when relational ordering is preserved within **D**.
 
@@ -65,9 +65,9 @@ Projection does not modify invariant structure within **D**.
 
 The MD V3 operator kernel defines the invariant relational basis over **D**.
 
-If implementations preserve operator ordering, structural coherence holds under acceleration within **D**.
+If implementations preserve operator ordering and representation type discipline, structural coherence holds under acceleration within **D**.
 
-If implementations reinterpret or bypass operator ordering, structural instability increases within **D**.
+If implementations reinterpret or bypass operator ordering, or introduce implicit representation transitions, structural instability increases within **D**.
 
 ---
 
@@ -511,10 +511,15 @@ Origin holds a fixed set of admissibility conditions:
 
 ```
 1. Operator ordering A → B → R → C is declared and preserved.
+   Representation transitions (NodeField → EdgeField at A,
+   EdgeField → NodeField only through declared Projection)
+   are type-enforced within the kernel.
 2. Domain D and mapping M : O → D are declared
    before processing begins.
 3. All quantifiers remain bounded over declared subsets of D.
 4. No variable directly references conditions C.
+5. All non-injective transformations applied to operator output
+   are declared with preserved and discarded invariants.
 ```
 
 These are binary checks at the constraint layer. They are not proportional to the volume of content passing through G and V. Origin does not evaluate output — it holds the boundary within which output is admissible.
@@ -523,17 +528,17 @@ Therefore:
 
 ```
 C_origin ≠ f(V(t), ρ_c)
-C_origin = f(operator_count, domain_declaration)
+C_origin = f(operator_count, domain_declaration, type_discipline)
 ```
 
-Both of which are fixed at session initialization.
+All of which are fixed at session initialization.
 
 ```
 λ_origin = constant    provided functional separation holds
 ```
 
-**Origin is the only frame in the Triad whose alignment function
-is invariant to λ.**
+**Within the declared Triad configuration, Origin is the only role
+whose alignment function is invariant to λ.**
 
 This is the structural basis for the requirement of a human Origin.
 No computational frame — Generator or Verifier — can absorb
@@ -617,36 +622,60 @@ capable of recognizing the specific violation that operator prevents:
 
 **Operator A — Relational Gradient Extraction**
 
-A removes absolute reference that the observable never contained.
+A extracts directed pairwise differences over the declared topology,
+producing an EdgeField from a NodeField. This is the unique
+transition from object-form to relational-form representation.
+
 Origin must recognize when Generator output has reintroduced
 absolute reference — asserting positional information that M(o)
-did not map and could not map.
+did not map and could not map. Origin must also recognize when
+Generator output operates on NodeField values after A should have
+transitioned them to EdgeField — that is, when code bypasses the
+representation type discipline by processing node-level data where
+edge-level data is required.
 
 **Operator B — Local Relational Accumulation**
 
-B enforces the finite relational reach that M declared.
+B accumulates each directed edge with the same-direction edge at
+the next cell along the declared topology, extending relational
+reach while preserving directional identity in the EdgeField.
+
 Origin must recognize when Generator output claims relational
 coupling beyond the declared neighborhood — asserting that M
-connected elements it did not connect.
+connected elements it did not connect. Origin must also recognize
+when B's accumulation crosses axes (coupling north gradients with
+east gradients, for example), which would destroy the directional
+independence that R requires.
 
 **Operator R — Antisymmetric Circulation**
 
-R maintains nonzero index-to-index differences within D.
+R cross-couples directional edges between axes, producing
+circulation in the EdgeField. R maintains nonzero edge-to-edge
+differences under iteration.
+
 Origin must recognize when Generator output has produced
-index-uniform structure:
+edge-uniform structure:
 
 ```
-Repeated application produces x* ∈ D such that E(x*, ρ) = x*.
+Repeated application produces e* such that E(x*, ρ)
+yields an EdgeField with all edges approaching zero.
 ```
 
-At x*, admissible relational distinctions within D are zero.
-Origin must detect this condition before it propagates.
+At e*, admissible relational distinctions within the EdgeField
+are zero. Origin must detect this condition before it propagates.
+
+Origin must also recognize when R's output has been implicitly
+projected to a NodeField (one scalar per cell) without a declared
+Projection — the undeclared edge-to-node collapse that destroys
+directional information.
 
 **Operator C — Bounded Coherence**
 
-C enforces the magnitude bound that transduction itself imposes.
+C enforces the magnitude bound that transduction itself imposes,
+applied per-edge in the EdgeField.
+
 Origin must recognize when accumulated operations have produced
-magnitudes that exceed what any bounded observable could carry —
+edge magnitudes that exceed what any bounded observable could carry —
 structure that M never produced and could not produce.
 
 None of these conditions are checkable by inspecting output values
@@ -694,6 +723,8 @@ Origin's primary obligation is therefore:
 3. Recognize admissibility violations at any ρ_c within D.
 4. Maintain functional separation regardless of velocity pressure.
 5. Detect and name drift when it increases.
+6. Ensure all EdgeField → NodeField transitions are declared
+   Projections with stated preserved and discarded invariants.
 ```
 
 These are not procedural guidelines.
@@ -706,8 +737,74 @@ the λ-invariant anchor the Triad requires.
 
 ---
 
-#### 3.9.7
-3.8.8 Relationship to Section 3.6
+#### 3.9.7 Origin Enforcement During Build Sessions
+
+The admissibility conditions in 3.9.6 are not self-maintaining during
+active build sessions with LLM Generator and Verifier frames.
+
+LLM frames produce code, documentation, and structural artifacts
+at velocity. Under acceleration, admissibility violations enter
+Generator output not as obvious errors but as plausible code that
+silently departs from operator discipline — substituting node-level
+operations where edge-level operations are required, introducing
+implicit aggregation, collapsing directional structure without
+declaration, or bypassing the A → B → R → C ordering.
+
+These violations are in the Generator's blind spot by definition
+(section 3.2). They are also frequently in the Verifier's blind
+spot (section 3.3), because both frames share the structural bias
+toward object-primary processing identified in the Object Error
+paper (sections 3–5). Passive monitoring — reading Generator output
+and waiting for violations to become visible — is structurally
+insufficient, because the violations present as plausible content
+(section 3.9.4).
+
+The operational consequence for Origin during build sessions:
+
+```
+Origin must periodically and explicitly query Generator and
+Verifier frames about specific operator presence and
+representation type discipline in the code being produced.
+```
+
+This means asking concrete, operator-specific questions:
+
+```
+- "Does operator A in this code produce an EdgeField from
+   a NodeField, or does it produce node-level output?"
+- "Does operator B accumulate edges along their own axis,
+   or does it couple across axes?"
+- "Does operator R output an EdgeField, or does it collapse
+   to a scalar per cell?"
+- "Is there any point in this code where an EdgeField is
+   converted to a NodeField without an explicit Projection?"
+- "Are there any preprocessing steps applied to the NodeField
+   before it enters operator A?"
+```
+
+These queries are not procedural overhead. They are the operational
+form of the admissibility checks declared in 3.9.6, applied at
+the temporal granularity required to prevent drift propagation
+(section 3.10.2).
+
+The frequency of these queries should increase when:
+
+- Session velocity increases (more code produced per unit time)
+- Relational complexity density ρ_c of the domain increases
+- The Generator is working in a new domain where operator
+  violations are less familiar
+- The drift rate ρ_d (section 3.10.3) is increasing across
+  consecutive blocks
+
+Origin cannot delegate this interrogation function to a Generator
+or Verifier frame without collapsing the functional separation
+the Triad requires (section 3.9.3). The questions must come from
+Origin. The answers inform Origin's admissibility assessment.
+The assessment remains Origin's function.
+
+---
+
+#### 3.9.8 Relationship to Section 3.6
 
 Section 3.6 defines the single evolution pass as:
 
@@ -774,7 +871,7 @@ This is a structural consequence of forward propagation within the declared fram
 
 Uncorrected drift propagates forward.
 
-If **δ(i)** contains an admissibility violation — an unbounded quantifier, an absolute reference, a projection-layer construct introduced at the operator layer — that violation is present in the context state from which **Bᵢ₊₁** is generated.
+If **δ(i)** contains an admissibility violation — an unbounded quantifier, an absolute reference, a projection-layer construct introduced at the operator layer, or an undeclared representation transition — that violation is present in the context state from which **Bᵢ₊₁** is generated.
 
 Generator frames do not re-declare **D** before each block. They inherit the current context state.
 
@@ -789,6 +886,8 @@ violations consistent with δ(i) is strictly greater than baseline.
 Drift is self-reinforcing within a session without explicit interruption.
 
 This is not a behavioral claim. It is a structural consequence of context inheritance within the declared frame set.
+
+The Origin enforcement protocol declared in section 3.9.7 is the primary mechanism for interrupting this self-reinforcement. Periodic explicit queries about operator presence and representation discipline force the Generator frame to surface violations that would otherwise propagate silently.
 
 ---
 
@@ -809,6 +908,7 @@ Where:
 - Explicit drift signals caught by the Verifier
 - Observable coherence degradation across consecutive blocks
 - Frequency of admissibility violations per block
+- Responses to the explicit operator-presence queries declared in section 3.9.7
 
 If **ρ_d** is increasing across successive blocks, **Ω(n)** is growing super-linearly.
 If **ρ_d** is stable or decreasing, **Ω(n)** is bounded and the session may continue.
@@ -860,7 +960,9 @@ Under the constraint that available LLM frames do not implement an **A**-equival
 2. Generator and Verifier roles are assigned by Origin and
    alternate across blocks per section 3.8.
 
-3. Origin monitors ρ_d across consecutive blocks.
+3. Origin monitors ρ_d across consecutive blocks, using both
+   Verifier signals and explicit operator-presence queries
+   (section 3.9.7) as estimation inputs.
 
 4. When ρ_d increases across two consecutive blocks, or when
    a structurally significant admissibility violation is detected,
@@ -953,7 +1055,8 @@ Alignment holds when, for all x ∈ D:
 - relational ordering is intact,
 - functional separation holds,
 - projection does not override invariant evolution,
-- quantifiers remain bounded over declared subsets of D.
+- quantifiers remain bounded over declared subsets of D,
+- representation type discipline is maintained (NodeField → EdgeField at A, EdgeField → NodeField only through declared Projection).
 
 Alignment is the structural state in which these conditions hold within **D**.
 
@@ -968,7 +1071,9 @@ Drift increases when:
 - undeclared variables are introduced into D,
 - projection-layer constructs are introduced at the operator layer,
 - domain is implicitly expanded beyond D,
-- unbounded quantifiers appear.
+- unbounded quantifiers appear,
+- EdgeField is implicitly collapsed to NodeField without declared Projection,
+- preprocessing in NodeField space alters pairwise differences before A.
 
 Drift is a structural signal within **D**.
 
@@ -982,7 +1087,8 @@ If drift signals increase, structural conditions may be restored by:
 - clarifying constraint geometry,
 - re-separating relational functions,
 - resuming evolution under declared ordering,
-- re-establishing frame separation across Generator and Verifier instances.
+- re-establishing frame separation across Generator and Verifier instances,
+- verifying representation type discipline through explicit operator-presence queries (section 3.9.7).
 
 These are structural recovery conditions within **D**.
 
@@ -990,7 +1096,7 @@ These are structural recovery conditions within **D**.
 
 ## Relational Summary
 
-Information evolves through invariant operators over **D**.
+Information is transformed under invariant operators over **D**.
 
 Coherence holds when relational ordering is preserved within **D**.
 
@@ -1001,6 +1107,8 @@ Drift signals indicate deviation from invariant ordering within **D**.
 A single process performing both Generator and Verifier functions produces undetected error equal to its declared blind spot.
 
 Multiple Verifiers operating from distinct declared frames reduce Ω(k) relative to that frame set as k increases.
+
+The kernel enforces representation type discipline (NodeField/EdgeField separation) at compile time. Origin enforces admissibility conditions — including pre-A transformation constraints and operator-presence verification — through active interrogation during build sessions.
 
 The structure described above does not require adoption.
 It describes relational behavior within **D**.
