@@ -15,6 +15,9 @@
 // Every operator acts on differences or produces differences.
 // No operator computes a statistical aggregate:
 // no mean, no variance, no normalization, no sum-of-all.
+// The operators do not replace existing methods;
+// they constrain how any method may operate on relational
+// structure.
 //
 // =======================================================
 // REPRESENTATION TYPES
@@ -76,18 +79,88 @@
 //     No cross-axis coupling. That is R's function.
 //
 // R : EdgeField x rho -> EdgeField
-//     Cross-couples gradients between axes.
-//     This is where circulation emerges.
+//     Cross-couples gradients between perpendicular axes
+//     through additive antisymmetric circulation.
+//     Each edge retains its value from B and receives
+//     an additive term from perpendicular-axis asymmetry.
+//     No replacement. No magnitude-weighted distribution.
+//     No pooling of circulation planes.
 //
 // C : EdgeField -> EdgeField
-//     Bounds output. C(x) = x / (1 + |x|).
-//     Output in (-1, 1) by construction.
+//     Bounds output at the cell level. All edges at a
+//     cell share the same denominator: 1 + max_grad,
+//     where max_grad is the maximum absolute edge value
+//     at that cell. Preserves relative proportions
+//     between edges at a cell. Output in (-1, 1).
+//
+//     In 1D, each cell owns one edge, so cell-level
+//     and per-edge bounding are equivalent:
+//       C(e)[i] = e[i] / (1 + |e[i]|)
+//
+//     In >=2D, per-edge bounding destroys relative
+//     proportions between directional edges at a cell.
+//     Cell-level bounding preserves them:
+//       C(e_d)[i] = e_d[i] / (1 + max_grad[i])
 //
 // rho is spatially varying, derived from A's edge output.
 // rho is computed outside the operator sequence as a
 // derived quantity. It is not a statistical aggregate of
 // the field -- it is a per-cell measure of relational
 // gradient strength at that cell.
+//
+// =======================================================
+// R STRUCTURAL INVARIANT (ALL DIMENSIONS)
+// =======================================================
+//
+// The 1D form of R is:
+//   R(e)[i] = e[i] + rho * (forward - backward)
+//
+// Properties:
+//   - Additive: edge retains its B output
+//   - Antisymmetric: forward minus backward
+//   - Local: depends only on immediate neighbors
+//   - No replacement, no distribution, no aggregation
+//
+// In >=2D, this generalizes to:
+//   R(e_d)[i] = e_d[i] + rho[i] * A_d(i)
+//
+// where A_d(i) is the perpendicular-axis asymmetry
+// relevant to direction d at cell i.
+//
+// In 2D:
+//   Meridional edges += rho * zonal_asymmetry
+//   Zonal edges += rho * meridional_asymmetry
+//   (sign determined by hemisphere convention)
+//
+// In 3D:
+//   Each axis receives the difference of asymmetries
+//   from the other two axes. The three additive terms
+//   sum to zero: R introduces no net energy, only
+//   redistribution across axes.
+//
+// =======================================================
+// C STRUCTURAL INVARIANT (ALL DIMENSIONS)
+// =======================================================
+//
+// Let N(i) be the set of directed edges at index i.
+// Define: m(i) = max_{e in N(i)} |e|
+//
+// Then: C(e_d)[i] = e_d[i] / (1 + m(i))
+//
+// Properties:
+//   - Bounded: |C(e_d)| < 1
+//   - Sign-preserving: sign(C(e_d)) = sign(e_d)
+//   - Monotone in each component
+//   - Ratio-preserving: C(e_d1)/C(e_d2) = e_d1/e_d2
+//     for any directions d1, d2 at the same cell
+//   - No cross-cell coupling
+//   - No aggregation across directions
+//
+// In 1D: m(i) = |e[i]| (one edge per index),
+//   so C(e)[i] = e[i] / (1 + |e[i]|) — unchanged.
+//
+// In >=2D: m(i) = max over all directional edges at i.
+//   All edges at a cell share the same denominator.
 //
 // =======================================================
 // PROJECTION
@@ -203,6 +276,7 @@ pub mod one_d {
     /// R(e)[i] = e[i] + rho * (e[(i+1) mod n] - e[(i-1) mod n])
     ///
     /// Forward-backward difference on edges. Antisymmetric.
+    /// Additive: edge retains its value from B.
     /// Maintains nonzero differences under iteration.
     /// rho in (0.0, 0.5].
     pub fn operator_r(edges: &EdgeField, rho: f64) -> EdgeField {
@@ -224,6 +298,9 @@ pub mod one_d {
     /// C(e)[i] = e[i] / (1 + |e[i]|)
     ///
     /// Output in (-1, 1). Odd function. No clamping.
+    ///
+    /// In 1D, each index owns one edge. Cell-level and
+    /// per-edge bounding are equivalent: m(i) = |e[i]|.
     pub fn operator_c(edges: &EdgeField) -> EdgeField {
         EdgeField(
             edges.0.iter()
@@ -431,26 +508,34 @@ pub mod two_d {
 
     /// R -- Antisymmetric Circulation (2D)
     ///
-    /// Cross-couples gradients between axes.
-    /// This is where rotation emerges.
+    /// Additive cross-coupling between perpendicular axes.
+    /// Each edge retains its value from B and receives
+    /// an additive circulation term from the perpendicular-
+    /// axis asymmetry at its own cell.
     ///
-    /// R takes the accumulated edge field from B
-    /// and produces an evolved edge field.
+    /// This is the 2D generalization of the 1D form:
+    ///   R(e)[i] = e[i] + rho * (forward - backward)
     ///
-    /// At each cell, R computes:
+    /// In 2D, "forward minus backward" becomes
+    /// "perpendicular-axis asymmetry":
     ///
-    /// Net zonal relation:
-    ///   dz = south - north
+    ///   Meridional edges (north, south) receive
+    ///   zonal asymmetry: east - west
     ///
-    /// Net meridional relation:
-    ///   dm = east - west
+    ///   Zonal edges (east, west) receive
+    ///   meridional asymmetry: south - north
     ///
-    /// Circulation cross-term (NH): dz - dm
+    /// Properties preserved from 1D:
+    ///   - Additive: edge keeps its B output
+    ///   - Antisymmetric: asymmetry is a difference
+    ///   - Local: only this cell's edges
+    ///   - No replacement, no distribution, no aggregation
+    ///   - No magnitude-weighted fraction
+    ///   - No pooling of asymmetries into a single scalar
     ///
-    /// The output is an EdgeField2D where each direction
-    /// carries the circulation contribution. The directional
-    /// structure is preserved -- R does not collapse edges
-    /// to nodes.
+    /// Hemisphere sign convention:
+    ///   NH: meridional += zonal_asym, zonal += merid_asym
+    ///   SH: signs reversed
     pub fn operator_r(bg: &EdgeField2D, rho: &[f64],
                       hemisphere_north: bool) -> EdgeField2D {
         let (rows, cols) = (bg.rows, bg.cols);
@@ -461,39 +546,22 @@ pub mod two_d {
         let mut east  = vec![0.0; n];
         let mut west  = vec![0.0; n];
 
+        let sign: f64 = if hemisphere_north { 1.0 } else { -1.0 };
+
         for i in 0..rows {
             for j in 0..cols {
                 let k = ix(cols, i, j);
 
-                // Directional asymmetries (differences of differences)
-                let dz = bg.south[k] - bg.north[k];
-                let dm = bg.east[k] - bg.west[k];
+                // Perpendicular-axis asymmetries at this cell
+                let zonal_asym = bg.east[k] - bg.west[k];
+                let merid_asym = bg.south[k] - bg.north[k];
 
-                // Cross-coupling: rotation
-                let circ = if hemisphere_north {
-                    dz - dm
-                } else {
-                    -dz + dm
-                };
-
-                let val = rho[k] * circ;
-
-                // Distribute circulation back to directional edges.
-                // Each direction receives the circulation scaled by
-                // its proportion of the local gradient structure.
-                // This preserves directional identity in the output.
-                let total = bg.north[k].abs()
-                    + bg.south[k].abs()
-                    + bg.east[k].abs()
-                    + bg.west[k].abs();
-
-                if total > 0.0 {
-                    north[k] = val * (bg.north[k].abs() / total);
-                    south[k] = val * (bg.south[k].abs() / total);
-                    east[k]  = val * (bg.east[k].abs() / total);
-                    west[k]  = val * (bg.west[k].abs() / total);
-                }
-                // If total == 0, all edges are zero; output remains zero.
+                // Additive: each edge keeps its B value
+                // and receives perpendicular-axis circulation
+                north[k] = bg.north[k] + sign * rho[k] * zonal_asym;
+                south[k] = bg.south[k] + sign * rho[k] * zonal_asym;
+                east[k]  = bg.east[k]  + sign * rho[k] * merid_asym;
+                west[k]  = bg.west[k]  + sign * rho[k] * merid_asym;
             }
         }
 
@@ -504,20 +572,48 @@ pub mod two_d {
 
     /// C -- Bounded Coherence (2D)
     ///
-    /// C(e) = e / (1 + |e|) applied per-edge.
+    /// Cell-level bounding. All edges at a cell share
+    /// the same denominator: 1 + max_grad, where max_grad
+    /// is the maximum absolute edge value at that cell.
+    ///
+    /// C(e_d)[k] = e_d[k] / (1 + m(k))
+    /// where m(k) = max(|north|, |south|, |east|, |west|)
+    ///
+    /// This preserves the relative proportions between
+    /// directional edges at a cell. Per-edge bounding
+    /// (the 1D formula applied independently to each
+    /// direction) destroys these proportions in >=2D.
+    ///
+    /// Properties:
+    ///   - Bounded: |C(e_d)| < 1
+    ///   - Sign-preserving
+    ///   - Monotone in each component
+    ///   - Ratio-preserving: C(e_d1)/C(e_d2) = e_d1/e_d2
+    ///   - No cross-cell coupling
+    ///   - No aggregation across directions
+    ///   - C(0) = 0
     pub fn operator_c(g: &EdgeField2D) -> EdgeField2D {
-        let bound = |v: &[f64]| -> Vec<f64> {
-            v.iter().map(|&x| x / (1.0 + x.abs())).collect()
-        };
+        let n = g.rows * g.cols;
+        let mut north = vec![0.0; n];
+        let mut south = vec![0.0; n];
+        let mut east  = vec![0.0; n];
+        let mut west  = vec![0.0; n];
 
-        EdgeField2D {
-            north: bound(&g.north),
-            south: bound(&g.south),
-            east:  bound(&g.east),
-            west:  bound(&g.west),
-            rows: g.rows,
-            cols: g.cols,
+        for k in 0..n {
+            let max_grad = g.north[k].abs()
+                .max(g.south[k].abs())
+                .max(g.east[k].abs())
+                .max(g.west[k].abs());
+            let denom = 1.0 + max_grad;
+
+            north[k] = g.north[k] / denom;
+            south[k] = g.south[k] / denom;
+            east[k]  = g.east[k]  / denom;
+            west[k]  = g.west[k]  / denom;
         }
+
+        EdgeField2D { north, south, east, west,
+                     rows: g.rows, cols: g.cols }
     }
 
     // --- E ---
@@ -778,13 +874,41 @@ pub mod three_d {
 
     /// R -- Antisymmetric Circulation (3D)
     ///
-    /// Three circulation planes, each a cross-coupling
-    /// of directional asymmetries between two axes.
+    /// Additive cross-coupling between perpendicular axes.
+    /// Three axis pairs, each producing independent
+    /// circulation contributions. No pooling into a
+    /// single scalar. No magnitude-weighted distribution.
     ///
-    /// All terms are differences of differences.
-    /// Relational throughout.
+    /// Axis asymmetries:
+    ///   A_vert  = down - up       (vertical asymmetry)
+    ///   A_merid = south - north   (meridional asymmetry)
+    ///   A_zonal = east - west     (zonal asymmetry)
     ///
-    /// Output is EdgeField3D -- directional structure preserved.
+    /// Cross-coupling (each axis receives the difference
+    /// of asymmetries from the other two axes):
+    ///
+    ///   Vertical edges (up, down):
+    ///     += rho * (A_merid - A_zonal)
+    ///
+    ///   Meridional edges (north, south):
+    ///     += rho * (A_zonal - A_vert)
+    ///
+    ///   Zonal edges (east, west):
+    ///     += rho * (A_vert - A_merid)
+    ///
+    /// The three additive terms sum to zero:
+    ///   (A_merid - A_zonal) + (A_zonal - A_vert)
+    ///     + (A_vert - A_merid) = 0
+    ///
+    /// R introduces no net energy, only redistribution
+    /// across axes. This is a structural property, not
+    /// a coincidence.
+    ///
+    /// Properties preserved from 1D:
+    ///   - Additive: each edge keeps its B output
+    ///   - Antisymmetric: all terms are differences
+    ///   - Local: only this cell's edges
+    ///   - No replacement, no distribution, no aggregation
     pub fn operator_r(bg: &EdgeField3D, rho: &[f64],
                       hemisphere_north: bool) -> EdgeField3D {
         let n = bg.d0 * bg.d1 * bg.d2;
@@ -796,41 +920,27 @@ pub mod three_d {
         let mut east  = vec![0.0; n];
         let mut west  = vec![0.0; n];
 
+        let sign: f64 = if hemisphere_north { 1.0 } else { -1.0 };
+
         for p in 0..n {
-            let d_vert  = bg.down[p]  - bg.up[p];
-            let d_merid = bg.south[p] - bg.north[p];
-            let d_zonal = bg.east[p]  - bg.west[p];
+            // Axis asymmetries at this cell
+            let a_vert  = bg.down[p]  - bg.up[p];
+            let a_merid = bg.south[p] - bg.north[p];
+            let a_zonal = bg.east[p]  - bg.west[p];
 
-            let circ_latlon = if hemisphere_north {
-                d_merid - d_zonal
-            } else {
-                -d_merid + d_zonal
-            };
+            // Each axis receives difference of asymmetries
+            // from the other two axes. Additive, no pooling.
+            let circ_vert  = sign * rho[p] * (a_merid - a_zonal);
+            let circ_merid = sign * rho[p] * (a_zonal - a_vert);
+            let circ_zonal = sign * rho[p] * (a_vert  - a_merid);
 
-            let circ_vert_merid = d_vert - d_merid;
-            let circ_vert_zonal = d_vert - d_zonal;
-
-            let total_circ = rho[p]
-                * (circ_latlon + circ_vert_merid + circ_vert_zonal);
-
-            // Distribute circulation to directional edges
-            // proportional to their contribution to the
-            // local gradient structure.
-            let total = bg.up[p].abs()
-                + bg.down[p].abs()
-                + bg.north[p].abs()
-                + bg.south[p].abs()
-                + bg.east[p].abs()
-                + bg.west[p].abs();
-
-            if total > 0.0 {
-                up[p]    = total_circ * (bg.up[p].abs() / total);
-                down[p]  = total_circ * (bg.down[p].abs() / total);
-                north[p] = total_circ * (bg.north[p].abs() / total);
-                south[p] = total_circ * (bg.south[p].abs() / total);
-                east[p]  = total_circ * (bg.east[p].abs() / total);
-                west[p]  = total_circ * (bg.west[p].abs() / total);
-            }
+            // Additive: edge keeps its B value
+            up[p]    = bg.up[p]    + circ_vert;
+            down[p]  = bg.down[p]  + circ_vert;
+            north[p] = bg.north[p] + circ_merid;
+            south[p] = bg.south[p] + circ_merid;
+            east[p]  = bg.east[p]  + circ_zonal;
+            west[p]  = bg.west[p]  + circ_zonal;
         }
 
         EdgeField3D { up, down, north, south, east, west,
@@ -841,23 +951,43 @@ pub mod three_d {
 
     /// C -- Bounded Coherence (3D)
     ///
-    /// Applied per-edge across all six directions.
+    /// Cell-level bounding. All six edges at a cell share
+    /// the same denominator: 1 + max_grad.
+    ///
+    /// C(e_d)[p] = e_d[p] / (1 + m(p))
+    /// where m(p) = max(|up|, |down|, |north|, |south|,
+    ///                  |east|, |west|) at cell p.
+    ///
+    /// Properties: bounded, sign-preserving, monotone,
+    /// ratio-preserving, no cross-cell coupling.
     pub fn operator_c(g: &EdgeField3D) -> EdgeField3D {
-        let bound = |v: &[f64]| -> Vec<f64> {
-            v.iter().map(|&x| x / (1.0 + x.abs())).collect()
-        };
+        let n = g.d0 * g.d1 * g.d2;
+        let mut up    = vec![0.0; n];
+        let mut down  = vec![0.0; n];
+        let mut north = vec![0.0; n];
+        let mut south = vec![0.0; n];
+        let mut east  = vec![0.0; n];
+        let mut west  = vec![0.0; n];
 
-        EdgeField3D {
-            up:    bound(&g.up),
-            down:  bound(&g.down),
-            north: bound(&g.north),
-            south: bound(&g.south),
-            east:  bound(&g.east),
-            west:  bound(&g.west),
-            d0: g.d0,
-            d1: g.d1,
-            d2: g.d2,
+        for p in 0..n {
+            let max_grad = g.up[p].abs()
+                .max(g.down[p].abs())
+                .max(g.north[p].abs())
+                .max(g.south[p].abs())
+                .max(g.east[p].abs())
+                .max(g.west[p].abs());
+            let denom = 1.0 + max_grad;
+
+            up[p]    = g.up[p]    / denom;
+            down[p]  = g.down[p]  / denom;
+            north[p] = g.north[p] / denom;
+            south[p] = g.south[p] / denom;
+            east[p]  = g.east[p]  / denom;
+            west[p]  = g.west[p]  / denom;
         }
+
+        EdgeField3D { up, down, north, south, east, west,
+                     d0: g.d0, d1: g.d1, d2: g.d2 }
     }
 
     // --- E ---
@@ -899,9 +1029,20 @@ pub mod three_d {
 // Not node-level.
 //
 // R is the operator that cross-couples directional edges.
-// It does so through antisymmetric circulation, not
-// through aggregation. Its output is an edge field,
-// preserving directional structure.
+// It does so through additive antisymmetric circulation,
+// not through aggregation or magnitude-weighted distribution.
+// Each edge retains its value from B and receives an
+// additive term from perpendicular-axis asymmetry.
+// Its output is an edge field, preserving directional
+// structure.
+//
+// C bounds relational magnitude at the cell level using
+// the strongest local relation as the denominator.
+// All edges at a cell share the same denominator,
+// preserving their relative proportions. In 1D, this
+// is equivalent to per-edge bounding (one edge per cell).
+// In >=2D, cell-level bounding is structurally distinct
+// from per-edge bounding and is the correct form.
 //
 // Transition from edge field to node field requires an
 // explicit Projection implementation declaring preserved
