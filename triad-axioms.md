@@ -12,7 +12,7 @@ The following two axioms are not derived from the framework. They are **precondi
 
 **Definition 1 (Bounded cognitive frame).** Let $\mathcal{F}_h$ denote the bounded information-processing domain of a single human being $h$. This domain is finite-dimensional, finite-bandwidth, and temporally bounded:
 
-$$\mathcal{F}_h \subset \left\{ x \in \mathbb{R}^n \;\middle|\; n < \infty,\; |x_i| < \infty \;\forall\, i \right\}$$
+$\mathcal{F}_h \subset \lbrace x \in \mathbb{R}^n \mid n < \infty,\; |x_i| < \infty \;\forall\, i \rbrace$
 
 $\mathcal{F}_h$ contains all and only the information accessible to $h$ through perception, cognition, and memory at any given time. It does not contain the internal states of other agents, the outputs of instruments $h$ has not read, or any information outside $h$'s perceptual and cognitive range.
 
